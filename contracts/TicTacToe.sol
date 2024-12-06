@@ -72,6 +72,7 @@ contract TicTacToe is ERC721 {
     function acceptGame(uint256 _gameId) external {
         if (games[_gameId].opponent != address(0)) revert GameStarted();
         if (games[_gameId].player == msg.sender) revert SenderIsOpponent();
+        if (games[_gameId].player == address(0)) revert GameNotExists();
 
         // Record Game Metadata (no moves)
         Game storage game = games[_gameId];

@@ -8,7 +8,7 @@ import {TicTacToe} from "./TicTacToe.sol";
 contract TicTacToeMetadata {
     using Strings for uint256;
 
-    function tokenURI(TicTacToe.Game calldata gameState) external view returns (string memory) {
+    function tokenURI(TicTacToe.Game calldata gameState) external pure returns (string memory) {
         bytes memory image = abi.encodePacked(
             'data:image/svg+xml;base64,',
             Base64.encode(
