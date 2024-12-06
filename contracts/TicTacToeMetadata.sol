@@ -7,16 +7,8 @@ import {TicTacToe} from "./TicTacToe.sol";
 
 contract TicTacToeMetadata {
     using Strings for uint256;
-    
-    TicTacToe public immutable game;
-    
-    constructor(address _game) {
-        game = TicTacToe(_game);
-    }
 
-    function tokenURI(uint256 _gameId) external view returns (string memory) {
-        TicTacToe.Game memory gameState = game.gameState(_gameId);
-        
+    function tokenURI(TicTacToe.Game calldata gameState) external view returns (string memory) {
         bytes memory image = abi.encodePacked(
             'data:image/svg+xml;base64,',
             Base64.encode(
@@ -30,12 +22,6 @@ contract TicTacToeMetadata {
             )
         );
 
-        // Get winner address if game is finished
-        address winner = address(0);
-        if (gameState.isFinished) {
-            winner = game.getWinner(_gameId);
-        }
-
         return string(
             abi.encodePacked(
                 'data:application/json;base64,',
@@ -43,11 +29,11 @@ contract TicTacToeMetadata {
                     bytes(
                         abi.encodePacked(
                             '{"name": "Game #',
-                            _gameId.toString(),
+                            gameState.gameId.toString(),
                             '", "description": "On-chain Tic Tac Toe game", ',
                             '"attributes": [',
                                 '{"trait_type": "Game ID", "value": "',
-                                _gameId.toString(),
+                                gameState.gameId.toString(),
                                 '"}, ',
                                 '{"trait_type": "Player", "value": "',
                                 _addressToString(gameState.player),
@@ -59,7 +45,7 @@ contract TicTacToeMetadata {
                                 gameState.isFinished ? 'Finished' : 'In Progress',
                                 '"}, ',
                                 '{"trait_type": "Winner", "value": "',
-                                winner != address(0) ? _addressToString(winner) : 'None',
+                                gameState.winner != address(0) ? _addressToString(gameState.winner) : 'None',
                                 '"}, ',
                                 '{"trait_type": "Moves Left", "value": ',
                                 uint256(gameState.movesLeft).toString(),

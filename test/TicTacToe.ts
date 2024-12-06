@@ -10,11 +10,11 @@ describe("TicTacToe", function () {
     
     // Deploy main game contract
     const TicTacToe = await hre.ethers.getContractFactory("TicTacToe");
-    const metadata = await TicTacToeMetadata.deploy(owner.address); // Temporary address, will update
+    const metadata = await TicTacToeMetadata.deploy(); // Temporary address, will update
     const game = await TicTacToe.deploy(await metadata.getAddress());
     
     // Update metadata with correct game address
-    const updatedMetadata = await TicTacToeMetadata.deploy(await game.getAddress());
+    const updatedMetadata = await TicTacToeMetadata.deploy();
     
     return { game, metadata: updatedMetadata, owner, playerOne, playerTwo };
   }
@@ -150,10 +150,29 @@ describe("TicTacToe", function () {
         return { game, metadata, playerOne, playerTwo };
     }
 
+    function convertGameState(gameState: any) {
+        // Create a deep copy of the game state with all required fields
+        return {
+            player: gameState.player,
+            opponent: gameState.opponent,
+            gameId: gameState.gameId,
+            moves: gameState.moves.map((row: any) => [...row]),
+            movesLeft: gameState.movesLeft,
+            opponentBlockNumber: gameState.opponentBlockNumber || 0,
+            playerBlockNumber: gameState.playerBlockNumber || 0,
+            isFinished: gameState.isFinished,
+            winner: gameState.winner
+        };
+    }
+
     it("Should generate valid token URI", async function () {
-        const { metadata } = await playPartialGame();
+        const { game, metadata } = await playPartialGame();
         
-        const tokenUri = await metadata.tokenURI(0);
+        // Get the game state and convert it
+        const rawGameState = await game.gameState(0);
+        const gameState = convertGameState(rawGameState);
+        const tokenUri = await metadata.tokenURI(gameState);
+        
         expect(tokenUri).to.include('data:application/json;base64,');
         
         // Decode the base64 JSON
@@ -167,9 +186,10 @@ describe("TicTacToe", function () {
     });
 
     it("Should generate valid SVG with game state", async function () {
-        const { metadata } = await playPartialGame();
-        
-        const tokenUri = await metadata.tokenURI(0);
+        const { game, metadata } = await playPartialGame();
+        const rawGameState = await game.gameState(0);
+        const gameState = convertGameState(rawGameState);
+        const tokenUri = await metadata.tokenURI(gameState);
         const json = Buffer.from(tokenUri.split(',')[1], 'base64').toString();
         const parsedMetadata = JSON.parse(json);
         
@@ -193,11 +213,10 @@ describe("TicTacToe", function () {
 
     it("Should reflect empty board for new game", async function () {
         const { game, metadata, playerOne } = await loadFixture(deployGameFixture);
-        
-        // Just create game, don't make any moves
         await game.connect(playerOne).newGame();
-        
-        const tokenUri = await metadata.tokenURI(0);
+        const rawGameState = await game.gameState(0);
+        const gameState = convertGameState(rawGameState);
+        const tokenUri = await metadata.tokenURI(gameState);
         const json = Buffer.from(tokenUri.split(',')[1], 'base64').toString();
         const parsedMetadata = JSON.parse(json);
         const svgBase64 = parsedMetadata.image.split(',')[1];
@@ -223,7 +242,9 @@ describe("TicTacToe", function () {
         await game.connect(playerTwo).makeMove(0, 1, 0); // O middle left
         await game.connect(playerOne).makeMove(0, 2, 2); // X bottom right
         
-        const tokenUri = await metadata.tokenURI(0);
+        const rawGameState = await game.gameState(0);
+        const gameState = convertGameState(rawGameState);
+        const tokenUri = await metadata.tokenURI(gameState);
         const json = Buffer.from(tokenUri.split(',')[1], 'base64').toString();
         const parsedMetadata = JSON.parse(json);
         const svgBase64 = parsedMetadata.image.split(',')[1];
@@ -250,7 +271,9 @@ describe("TicTacToe", function () {
         // Make some moves
         await game.connect(playerOne).makeMove(0, 0, 0);
         
-        const tokenUri = await metadata.tokenURI(0);
+        const rawGameState = await game.gameState(0);
+        const gameState = convertGameState(rawGameState);
+        const tokenUri = await metadata.tokenURI(gameState);
         const json = Buffer.from(tokenUri.split(',')[1], 'base64').toString();
         const parsedMetadata = JSON.parse(json);
         
@@ -284,7 +307,9 @@ describe("TicTacToe", function () {
         await game.connect(playerTwo).makeMove(0, 2, 0);
         await game.connect(playerOne).makeMove(0, 2, 2);
         
-        const tokenUri = await metadata.tokenURI(0);
+        const rawGameState = await game.gameState(0);
+        const gameState = convertGameState(rawGameState);
+        const tokenUri = await metadata.tokenURI(gameState);
         const json = Buffer.from(tokenUri.split(',')[1], 'base64').toString();
         const parsedMetadata = JSON.parse(json);
         

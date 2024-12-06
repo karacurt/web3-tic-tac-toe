@@ -25,6 +25,7 @@ contract TicTacToe is ERC721 {
         uint256 opponentBlockNumber;
         uint256 playerBlockNumber;
         bool isFinished;
+        address winner;
     }
 
     /// @notice A game is identified from the (gameId) tuple from the chain it was initiated on
@@ -109,6 +110,7 @@ contract TicTacToe is ERC721 {
             emit GameWon(_gameId, winner, _x, _y);
             _transfer(address(this), winner, _gameId);
             game.isFinished = true;
+            game.winner = winner;
         } else if (game.movesLeft == 0) {
             emit GameDraw(_gameId, msg.sender, _x, _y);
             game.isFinished = true;
@@ -164,6 +166,6 @@ contract TicTacToe is ERC721 {
     }
 
     function tokenURI(uint256 _gameId) public view override returns (string memory) {
-        return metadata.tokenURI(_gameId);
+        return metadata.tokenURI(games[_gameId]);
     }
 }
