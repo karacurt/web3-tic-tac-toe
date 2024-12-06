@@ -30,6 +30,12 @@ contract TicTacToeMetadata {
             )
         );
 
+        // Get winner address if game is finished
+        address winner = address(0);
+        if (gameState.isFinished) {
+            winner = game.getWinner(_gameId);
+        }
+
         return string(
             abi.encodePacked(
                 'data:application/json;base64,',
@@ -38,7 +44,28 @@ contract TicTacToeMetadata {
                         abi.encodePacked(
                             '{"name": "Game #',
                             _gameId.toString(),
-                            '", "description": "On-chain Tic Tac Toe game", "image": "',
+                            '", "description": "On-chain Tic Tac Toe game", ',
+                            '"attributes": [',
+                                '{"trait_type": "Game ID", "value": "',
+                                _gameId.toString(),
+                                '"}, ',
+                                '{"trait_type": "Player", "value": "',
+                                _addressToString(gameState.player),
+                                '"}, ',
+                                '{"trait_type": "Opponent", "value": "',
+                                _addressToString(gameState.opponent),
+                                '"}, ',
+                                '{"trait_type": "Status", "value": "',
+                                gameState.isFinished ? 'Finished' : 'In Progress',
+                                '"}, ',
+                                '{"trait_type": "Winner", "value": "',
+                                winner != address(0) ? _addressToString(winner) : 'None',
+                                '"}, ',
+                                '{"trait_type": "Moves Left", "value": ',
+                                uint256(gameState.movesLeft).toString(),
+                                '}',
+                            '], ',
+                            '"image": "',
                             image,
                             '"}'
                         )
@@ -46,6 +73,25 @@ contract TicTacToeMetadata {
                 )
             )
         );
+    }
+
+    // Helper function to convert address to string
+    function _addressToString(address _addr) internal pure returns (string memory) {
+        if (_addr == address(0)) return "None";
+        
+        bytes memory s = new bytes(42);
+        s[0] = "0";
+        s[1] = "x";
+        
+        bytes memory hexChars = "0123456789abcdef";
+        
+        for (uint i = 0; i < 20; i++) {
+            uint8 b = uint8(uint160(_addr) >> (8 * (19 - i)));
+            s[2 + i * 2] = hexChars[uint8(b >> 4)];
+            s[2 + i * 2 + 1] = hexChars[uint8(b & 0x0f)];
+        }
+        
+        return string(s);
     }
 
     function _generateBoard(TicTacToe.Game memory _game) internal pure returns (string memory) {

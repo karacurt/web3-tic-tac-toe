@@ -54,13 +54,17 @@ contract TicTacToe is ERC721 {
 
     /// @notice Creates a new game that any player can accept
     function newGame() external {
-        Game storage game = games[nextGameId];
+        uint256 gameId = nextGameId;
+        Game storage game = games[gameId];
         game.player = msg.sender;
         game.movesLeft = 9;
-        game.gameId = nextGameId;
-        emit NewGame(nextGameId, msg.sender);
+        game.gameId = gameId;
+        
+        // Mint the NFT with the current gameId before incrementing
+        _mint(address(this), gameId);
+        
+        emit NewGame(gameId, msg.sender);
         nextGameId++;
-        _mint(address(this), nextGameId);
     }
 
     /// @notice Send out an acceptance event for a new game
@@ -84,30 +88,19 @@ contract TicTacToe is ERC721 {
         if (game.player != msg.sender && game.opponent != msg.sender)
             revert InvalidPlayer();
 
-        // The move played is forward progressing from the same chain
-        if (msg.sender == game.player) {
-            if (
-                game.playerBlockNumber == 0 &&
-                game.playerBlockNumber <= game.opponentBlockNumber
-            ) revert MoveNotForwardProgressing();
-            game.playerBlockNumber = block.number;
-        } else {
-            if (
-                game.opponentBlockNumber == 0 &&
-                game.opponentBlockNumber <= game.playerBlockNumber
-            ) revert MoveNotForwardProgressing();
-            game.opponentBlockNumber = block.number;
+        // Check if it's the player's turn
+        bool isPlayerTurn = (game.movesLeft % 2 == 1);
+        if ((isPlayerTurn && msg.sender != game.player) || 
+            (!isPlayerTurn && msg.sender != game.opponent)) {
+            revert MoveNotForwardProgressing();
         }
 
-        // Make a move and mark the latest seen opposing move.
+        // Make a move
         if (_x >= 3 || _y >= 3) revert MoveInvalid();
         if (game.moves[_x][_y] != 0) revert MoveTaken();
-        // Mark the opponents move
-        if (msg.sender == game.player) {
-            game.moves[_x][_y] = 1;
-        } else {
-            game.moves[_x][_y] = 2;
-        }
+        
+        // Mark the move
+        game.moves[_x][_y] = isPlayerTurn ? 1 : 2;
         game.movesLeft--;
 
         address winner = _isGameWon(game);
@@ -126,6 +119,10 @@ contract TicTacToe is ERC721 {
 
     function gameState(uint256 _gameId) public view returns (Game memory) {
         return games[_gameId];
+    }
+
+    function getWinner(uint256 _gameId) public view returns (address) {
+        return _isGameWon(games[_gameId]);
     }
 
     /// @notice helper to check if a game has been won and returns the winning player's address
